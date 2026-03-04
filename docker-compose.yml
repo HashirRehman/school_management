@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: school-management-api
+    ports:
+      - "5111:5111"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/school_management
+      - REDIS_URI=redis://redis:6379
+      - CACHE_REDIS=redis://redis:6379
+      - CORTEX_REDIS=redis://redis:6379
+      - USER_PORT=5111
+      - SERVICE_NAME=school-management
+      - LONG_TOKEN_SECRET=${LONG_TOKEN_SECRET:-your-long-token-secret-change-in-production}
+      - SHORT_TOKEN_SECRET=${SHORT_TOKEN_SECRET:-your-short-token-secret-change-in-production}
+      - NACL_SECRET=${NACL_SECRET:-your-nacl-secret-change-in-production}
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+    networks:
+      - school-network
+
+  mongo:
+    image: mongo:7
+    container_name: school-management-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - school-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: school-management-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - school-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  school-network:
+    driver: bridge
